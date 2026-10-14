@@ -19,10 +19,11 @@ description: Read .docx files from Google Drive with ~90% fewer tokens. Use when
    - Do NOT `read_file` (fails/binary).
    - Do NOT send `export_file` / `download_file` output to the LLM.
    - Download bytes to `/tmp` via local tooling (NOT into LLM context),
-     then run the bundled extractor (stdlib only, no install):
-     `python3 ../../extract.py /tmp/file.docx -o /tmp/file.md`
+     then run the bundled extractor (stdlib only, no install — resolve
+     paths relative to this SKILL.md's directory):
+     `python3 scripts/extract.py /tmp/file.docx -o /tmp/file.md`
 4. Read `/tmp/file.md` per section, not the whole file:
-   `python3 ../../extract.py /tmp/file.docx --section 6`
+   `python3 scripts/extract.py /tmp/file.docx --section 6`
 5. Don't `list_comments` / export PDF unless explicitly asked.
 
 ## What the extractor drops (not content, safe)

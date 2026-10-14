@@ -23,10 +23,10 @@ git clone https://github.com/dstwn/docs-reader.git
 cd docs-reader
 
 # Full extract
-python3 extract.py "document.docx" -o /tmp/out.md
+python3 skills/drive-docx-reader/scripts/extract.py "document.docx" -o /tmp/out.md
 
 # One section only (saves even more)
-python3 extract.py "document.docx" --section 6 -o /tmp/section6.md
+python3 skills/drive-docx-reader/scripts/extract.py "document.docx" --section 6 -o /tmp/section6.md
 ```
 
 Token estimate is printed to stderr on every run:
@@ -36,6 +36,25 @@ Token estimate is printed to stderr on every run:
 ```
 
 Quick rule of thumb: `tokens ≈ chars / 4`.
+
+## Install as a Cursor skill
+
+The skill is self-contained (`SKILL.md` + `scripts/`), so drop the folder
+in and restart Cursor (or start a new Agent session):
+
+```bash
+# Global — available in every project
+git clone https://github.com/dstwn/docs-reader.git /tmp/docs-reader
+mkdir -p ~/.cursor/skills
+cp -r /tmp/docs-reader/skills/drive-docx-reader ~/.cursor/skills/
+
+# ...or project-only
+cp -r /tmp/docs-reader/skills/drive-docx-reader ./.cursor/skills/
+```
+
+Verify: Settings → Rules → Agent Decides shows `drive-docx-reader`.
+Trigger it automatically (agent decides from the description) or manually
+by typing `/drive-docx-reader` in Agent chat.
 
 ## Usage
 
