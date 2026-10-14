@@ -1,9 +1,13 @@
 ---
 name: drive-docx-reader
-description: Read .docx files from Google Drive with ~90% fewer tokens. Use when reading Word documents via Google Drive MCP tools, when read_file fails on binary .docx, or when download/export output is too large for context. Parses locally to clean Markdown instead of base64.
+description: Read .docx files from Google Drive with ~90% fewer tokens. Use when read_file with a file ID fails because the file is an uploaded .docx rather than a native Google Doc, when reading Word documents via Google Drive MCP tools, or when download/export output is too large for context. Parses locally to clean Markdown instead of base64.
 ---
 
 # Read `.docx` without burning tokens
+
+**Trigger:** `read_file` + fileId fails or returns garbled binary → the file
+is an uploaded `.docx`, not a native Google Doc → follow this skill instead
+of retrying `read_file`.
 
 `read_file` fails on `.docx` (binary, not a native Google Doc).
 `download_file` / `export_file` into the LLM costs ~70–80k tokens for a
