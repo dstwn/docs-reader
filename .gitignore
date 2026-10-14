@@ -1,0 +1,6 @@
+# Private & artefak lokal — jangan publish
+*.docx
+BRD.md
+/tmp/
+__pycache__/
+*.pyc
