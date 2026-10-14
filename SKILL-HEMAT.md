@@ -1,31 +1,31 @@
-# Pola hemat-token baca .docx via Google Drive (isi sama, lossless teks)
+# Token-efficient `.docx` reading via Google Drive (same content, lossless text)
 
-Berlaku untuk file non-native seperti `[BRD] ... .docx` (~227 KB).
-Jangan ubah isi, hanya buang yang bukan isi.
+Applies to non-native files such as `*.docx` (~227 KB).
+Never change content — only drop what isn't content.
 
-## Urutan wajib
-1. `get_file_metadata(id)` saja dulu. Laporkan title/size/mimeType.
-2. Jika `mimeType = ...wordprocessingml.document` (.docx):
-   - JANGAN `read_file` (gagal/binary).
-   - JANGAN `export_file` / `download_file` ke LLM (base64 ~70-80k token untuk 227 KB).
-   - Unduh byte ke `/tmp` LEWAT tooling lokal (bukan ke context LLM), lalu:
-     `python3 docs-reader/extract.py /tmp/file.docx -o /tmp/file.md`
-3. Baca `/tmp/file.md` per section (1-9), bukan full. Contoh:
-   `python3 docs-reader/extract.py /tmp/file.docx --section 6`
+## Required order
+1. `get_file_metadata(id)` first. Report title/size/mimeType.
+2. If `mimeType = ...wordprocessingml.document` (.docx):
+   - Do NOT `read_file` (fails/binary).
+   - Do NOT `export_file` / `download_file` into the LLM (base64 ≈ 70–80k tokens for 227 KB).
+   - Download bytes to `/tmp` via local tooling (NOT into LLM context), then:
+     `python3 extract.py /tmp/file.docx -o /tmp/file.md`
+3. Read `/tmp/file.md` per section, not full. Example:
+   `python3 extract.py /tmp/file.docx --section 6`
 
-## Yang dibuang extractor (bukan isi, aman)
+## What the extractor drops (not content, safe)
 - XML metadata: author, revision, font, style IDs
 - Image binaries, drawing anchors
-- Paragraf kosong, spasi ganda -> tunggal, `\n{3,}` -> `\n\n`
-- Header/footer duplikat per section (ambil sekali)
+- Empty paragraphs, double spaces → single, `\n{3,}` → `\n\n`
+- Duplicated per-section headers/footers (kept once)
 
-## Yang dipertahankan (isi sama)
-- Urutan, nomor section 1-9, ID RQ/NFR/AC/RD
-- Tabel -> markdown compact `| a | b |` (bukan XML)
-- List/bullet level
+## What it preserves (same content)
+- Order, section numbers, requirement IDs (e.g. RQ/NFR/AC/RD)
+- Tables → compact Markdown `| a | b |` (not XML)
+- List/bullet levels
 
-## Estimasi (file 232.916 byte)
-- base64 ke LLM: ~310k char ~ 77k token
-- markdown terekstrak: ~20-35k char ~ 5-9k token
-- hemat ~85-90%, isi teks sama. Section filter hemat lagi 60-80%.
-- Rumus cepat: `token ~= chars/4`
+## Estimate (232,916-byte file)
+- base64 into LLM: ~310k chars ≈ 77k tokens
+- extracted Markdown: ~20–35k chars ≈ 5–9k tokens
+- saves ~85–90% with identical text. Section filter saves another 60–80%.
+- Quick rule: `tokens ~= chars/4`

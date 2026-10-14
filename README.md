@@ -1,72 +1,103 @@
-# docs-reader — Baca DOCX hemat token, isi tetap sama
+# docs-reader
 
-Masalah: skill Google Drive (`read_file` / `download_file` / `export_file`)
-boros token untuk file `.docx` non-native. File 227 KB jadi base64
-~310 ribu karakter ≈ **~77 ribu token** kalau dilempar mentah ke LLM.
+[![Python 3](https://img.shields.io/badge/python-3.x-blue)](https://www.python.org/)
+[![Zero dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](#)
+[![Saves ~90% tokens](https://img.shields.io/badge/tokens_-90%25-orange)](#benchmark)
+[![License: MIT](https://img.shields.io/github/license/dstwn/docs-reader)](LICENSE)
 
-Solusi di repo ini: unduh byte ke `/tmp` **di luar context LLM**,
-parse lokal ke Markdown bersih, baru kirim teksnya. Hasil uji pada
-BRD Inventory Movement Type (232.916 byte):
+**Read `.docx` files with ~90% fewer LLM tokens. Same text, zero dependencies.**
 
-| Jalur | Ukuran masuk LLM | Est. token |
+Google Drive agent skills (`read_file` / `download_file` / `export_file`)
+are token-expensive for non-native `.docx` files: a 227 KB document becomes
+~310K chars of base64 ≈ **~77K tokens** when passed raw to an LLM.
+`docs-reader` downloads the bytes *outside* the LLM context, parses them
+locally into clean Markdown, and feeds only the text in — about **~7.6K
+tokens** for the same document.
+
+## Quickstart
+
+No install. Python 3 only, stdlib only (`zipfile` + `xml`).
+
+```bash
+git clone https://github.com/dstwn/docs-reader.git
+cd docs-reader
+
+# Full extract
+python3 extract.py "document.docx" -o /tmp/out.md
+
+# One section only (saves even more)
+python3 extract.py "document.docx" --section 6 -o /tmp/section6.md
+```
+
+Token estimate is printed to stderr on every run:
+
+```
+-- chars=30585 est_tokens~7646 blocks=72
+```
+
+Quick rule of thumb: `tokens ≈ chars / 4`.
+
+## Usage
+
+```
+python3 extract.py [-h] [-o OUT] [--section SECTION] docx
+```
+
+| Flag | Effect |
+|---|---|
+| `-o / --out` | Write Markdown file (default: stdout) |
+| `--section N` | Keep only the numbered heading starting with `N` (e.g. `--section 6`) |
+
+## How it works
+
+Lossless text — only overhead is removed:
+
+**Stripped (not content, safe to drop):**
+- XML metadata: author, revisions, fonts, style IDs
+- Image binaries and drawing anchors
+- Empty paragraphs, double spaces → single, `\n{3,}` → `\n\n`
+- Duplicated per-section headers/footers (kept once)
+
+**Preserved (content stays identical):**
+- Order, numbered sections, requirement IDs
+- Tables → compact Markdown (`| a | b |` instead of verbose XML)
+- List / bullet nesting levels
+
+## Use with AI agents (Cursor + Google Drive MCP)
+
+`read_file` fails on `.docx` (binary, not a native Google Doc) and
+`download_file` / `export_file` burn tens of thousands of tokens on base64.
+Use this pattern instead:
+
+1. Skip `search` when the file ID is already in the user's pasted URL.
+2. Call `get_file_metadata(id)` first — report title/size/mimeType only.
+   Do not call `read_file` / `export_file` yet.
+3. If `mimeType = ...wordprocessingml.document` (`.docx`):
+   - Do NOT `read_file` (fails/binary).
+   - Do NOT send `export_file` / `download_file` output to the LLM.
+   - Download bytes to `/tmp` via local tooling and run:
+     `python3 extract.py /tmp/file.docx -o /tmp/file.md`
+4. Read `/tmp/file.md` per section, not the whole file.
+5. Don't `list_comments` / export PDF unless explicitly asked.
+
+## Benchmark
+
+Real run on a 232,916-byte BRD document:
+
+| Path | Into the LLM | Est. tokens |
 |---|---|---|
-| `download_file` base64 mentah | ~310.556 char | ~77.639 |
-| `extract.py` Markdown | 30.585 char, 72 blok | ~7.646 |
-| **Hemat** | | **~90,2 %** |
+| `download_file` raw base64 | ~310,556 chars | ~77,639 |
+| `extract.py` Markdown (72 blocks) | 30,585 chars | ~7,646 |
+| **Saved** | | **~90.2%** |
 
-Isi teks sama (lossless): urutan, nomor section 1–9, dan ID
-`RQ` / `NFR` / `AC-P` / `AC-N` / `AC-R` / `RD` dipertahankan.
-Yang dibuang hanya overhead: metadata XML, font/style, image binary,
-paragraf kosong, spasi ganda, `\n{3,}` → `\n\n`.
+Section filtering (`--section 9` → 2,040 chars ≈ 510 tokens) saves another
+60–80% on top when only one part is needed.
 
-Tanpa dependency. Hanya Python 3 stdlib (`zipfile` + `xml`).
+## Contributing
 
-## Cara pakai
+Issues and PRs welcome. Keep it stdlib-only so the tool stays
+copy-paste usable anywhere.
 
-```bash
-# 1. Full extract
-python3 extract.py "dokumen.docx" -o /tmp/hasil.md
+## License
 
-# 2. Satu section saja (lebih hemat lagi)
-python3 extract.py "dokumen.docx" --section 6 -o /tmp/section6.md
-
-# 3. Lihat estimasi token di stderr: chars=... est_tokens~...
-```
-
-Rumus cepat: `token ≈ chars / 4`.
-
-## Pola hemat di Cursor (MCP google-drive)
-
-1. Jangan `search` kalau ID sudah ada di URL yang ditempel user.
-2. Panggil `get_file_metadata(id)` dulu — laporkan title/size/mimeType.
-   Jangan `read_file` / `export_file` dulu.
-3. Jika `mimeType = ...wordprocessingml.document` (`.docx`):
-   - JANGAN `read_file` (gagal/binary).
-   - JANGAN `export_file` / `download_file` ke LLM (base64 mahal).
-   - Unduh byte ke `/tmp` lewat tooling lokal, jalankan `extract.py`,
-     baca `/tmp/hasil.md` per section.
-4. Jangan `list_comments` / `export_file` PDF kecuali diminta eksplisit.
-
-Detail ada di `SKILL-HEMAT.md`.
-
-## Struktur
-
-```
-extract.py       # DOCX -> Markdown (stdlib only)
-SKILL-HEMAT.md   # instruksi hemat untuk Cursor
-README.md        # file ini
-```
-
-File `.docx` dan hasil `BRD.md` pribadi **tidak ikut publish**
-(lihat `.gitignore`).
-
-## Publish ke GitHub
-
-```bash
-git init
-git add extract.py SKILL-HEMAT.md README.md .gitignore
-git commit -m "feat: docx to markdown token-efficient reader"
-gh repo create docs-reader --public --source=. --push
-```
-
-Pastikan `git status` bersih dari file `.docx` / `BRD.md` sebelum push.
+[MIT](LICENSE)
