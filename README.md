@@ -80,6 +80,10 @@ Use this pattern instead:
 4. Read `/tmp/file.md` per section, not the whole file.
 5. Don't `list_comments` / export PDF unless explicitly asked.
 
+Packaged as an agent skill for one-click install:
+[`skills/drive-docx-reader/SKILL.md`](skills/drive-docx-reader/SKILL.md)
+(Cursor / Opencode / Claude compatible).
+
 ## Benchmark
 
 Real run on a 232,916-byte BRD document:
